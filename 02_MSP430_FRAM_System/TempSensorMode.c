@@ -44,6 +44,7 @@
 #include "TempSensorMode.h"
 #include "hal_LCD.h"
 #include "main.h"
+#include "writeFram.h"
 
                                                         // See device datasheet for TLV table memory mapping
 #define CALADC_15V_30C  *((unsigned int *)0x1A1A)       // Temperature Sensor Calibration-30 C
@@ -52,7 +53,9 @@
 volatile unsigned char * tempUnit = &BAKMEM4_H;         // Temperature Unit
 volatile unsigned short *degC = (volatile unsigned short *) &BAKMEM5;                          // Celsius measurement
 volatile unsigned short *degF = (volatile unsigned short *) &BAKMEM6;                          // Fahrenheit measurement
-
+static int manualTempMode = 0;
+static int manualTempValue = 385;
+static signed short lastTemp;
 // TimerA UpMode Configuration Parameter
 Timer_A_initUpModeParam initUpParam_A1 =
 {
@@ -137,17 +140,25 @@ void tempSensor()
         if (*tempSensorRunning)
         {
         	// Turn LED1 on when waking up to calculate temperature and update display
-            P1OUT |= BIT0;
-
+            //P1OUT |= BIT0;
+          if (manualTempMode){
+            //手動模式：直接寫入手動設計的溫度
+            writeTemperatureToFRAM_celsius(manualTempValue);
+          }
+          else{
             // Calculate Temperature in degree C and F
             signed short temp = (ADCMEM0 - CALADC_15V_30C);
             *degC = ((long)temp * 10 * (85-30) * 10)/((CALADC_15V_85C-CALADC_15V_30C)*10) + 300;
             *degF = (*degC) * 9 / 5 + 320;
+            // writeTemperatureToFRAM_celsius(*degC);
+        
+            lastTemp = readTemperatureFromFRAM();
+          }
 
             // Update temperature on LCD
             displayTemp();
 
-            P1OUT &= ~BIT0;
+            // P1OUT &= ~BIT0;
         }
     }
 
@@ -196,12 +207,15 @@ void displayTemp()
     if (*tempUnit == 0)
     {
         showChar('C',pos6);
-        deg = *degC;
+        //deg = *degC;
+      deg = lastTemp; 
     }
     else
     {
         showChar('F',pos6);
-        deg = *degF;
+        //deg = *degF;
+      deg = lastTemp;
+      deg = (deg) * 9 / 5 + 320;
     }
 
     // Handle negative values
