@@ -45,7 +45,7 @@
 #include "hal_LCD.h"
 #include "main.h"
 #include "writeFram.h"
-
+#include "setThreshold.h"
                                                         // See device datasheet for TLV table memory mapping
 #define CALADC_15V_30C  *((unsigned int *)0x1A1A)       // Temperature Sensor Calibration-30 C
 #define CALADC_15V_85C  *((unsigned int *)0x1A1C)       // Temperature Sensor Calibration-85 C
@@ -150,9 +150,9 @@ void tempSensor()
             signed short temp = (ADCMEM0 - CALADC_15V_30C);
             *degC = ((long)temp * 10 * (85-30) * 10)/((CALADC_15V_85C-CALADC_15V_30C)*10) + 300;
             *degF = (*degC) * 9 / 5 + 320;
-            // writeTemperatureToFRAM_celsius(*degC);
-        
-            lastTemp = readTemperatureFromFRAM();
+            writeTemperatureToFRAM_celsius(*degC);
+            checkTemperatureAndTriggerLED(*degC);
+            // lastTemp = readTemperatureFromFRAM();
           }
 
             // Update temperature on LCD
@@ -207,15 +207,15 @@ void displayTemp()
     if (*tempUnit == 0)
     {
         showChar('C',pos6);
-        //deg = *degC;
-      deg = lastTemp; 
+        deg = *degC;
+      // deg = lastTemp; 
     }
     else
     {
         showChar('F',pos6);
-        //deg = *degF;
-      deg = lastTemp;
-      deg = (deg) * 9 / 5 + 320;
+        deg = *degF;
+      // deg = lastTemp;
+      // deg = (deg) * 9 / 5 + 320;
     }
 
     // Handle negative values
